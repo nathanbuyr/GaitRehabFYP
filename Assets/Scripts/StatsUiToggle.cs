@@ -18,6 +18,8 @@ public class StatsUiToggle : MonoBehaviour
     private GameObject panelObj;
     private Text panelText;
     private Button toggleButton;
+    private Button metronomeButton;
+    private Text metronomeButtonText;
     private Transform cameraTransform;
 
     void Start()
@@ -98,6 +100,31 @@ public class StatsUiToggle : MonoBehaviour
 
         toggleButton.onClick.AddListener(TogglePanel);
 
+        // Metronome toggle button
+        GameObject metroBtnObj = new GameObject("MetronomeToggleButton");
+        metroBtnObj.transform.SetParent(canvasObj.transform, false);
+        Image metroBtnImage = metroBtnObj.AddComponent<Image>();
+        metroBtnImage.color = new Color(0.1f, 0.3f, 0.8f, 0.9f);
+        metronomeButton = metroBtnObj.AddComponent<Button>();
+        RectTransform metroBtnRect = metroBtnObj.GetComponent<RectTransform>();
+        metroBtnRect.sizeDelta = buttonSize;
+        metroBtnRect.anchoredPosition = new Vector2(0f, -95f);
+
+        // Metronome button label
+        GameObject metroTextObj = new GameObject("MetronomeButtonText");
+        metroTextObj.transform.SetParent(metroBtnObj.transform, false);
+        metronomeButtonText = metroTextObj.AddComponent<Text>();
+        metronomeButtonText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        metronomeButtonText.fontSize = 24;
+        metronomeButtonText.color = Color.white;
+        metronomeButtonText.alignment = TextAnchor.MiddleCenter;
+        metronomeButtonText.text = "Metronome: Off";
+        RectTransform metroTextRect = metronomeButtonText.GetComponent<RectTransform>();
+        metroTextRect.sizeDelta = buttonSize;
+        metroTextRect.anchoredPosition = Vector2.zero;
+
+        metronomeButton.onClick.AddListener(ToggleMetronome);
+
         // Start hidden
         panelObj.SetActive(false);
     }
@@ -110,6 +137,13 @@ public class StatsUiToggle : MonoBehaviour
         if (panelObj.activeSelf && waypointManager != null)
         {
             panelText.text = waypointManager.GetStatsText();
+        }
+
+        if (metronomeButtonText != null && waypointManager != null)
+        {
+            metronomeButtonText.text = waypointManager.enableMetronome
+                ? "Metronome: On"
+                : "Metronome: Off";
         }
     }
 
@@ -151,5 +185,14 @@ public class StatsUiToggle : MonoBehaviour
             return;
 
         panelObj.SetActive(!panelObj.activeSelf);
+    }
+
+    void ToggleMetronome()
+    {
+        if (waypointManager == null)
+            return;
+
+        bool newState = !waypointManager.enableMetronome;
+        waypointManager.ToggleMetronome(newState);
     }
 }
