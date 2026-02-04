@@ -15,7 +15,8 @@ public class Waypoint : MonoBehaviour
     public Color lineColor = Color.green;
     public float lineWidth = 0.08f;
     public float lineSpacing = 0.4f;  // Distance between the two parallel lines
-    public float floorHeight = 0.005f;  // Height above floor (5mm)
+    [SerializeField]
+    private float floorHeight = -0.3f;  // Height above floor (30cm below world origin)
     
     private Vector3 originalScale;
     private Renderer rend;
@@ -29,6 +30,12 @@ public class Waypoint : MonoBehaviour
     // Called when player walks into waypoint
     public System.Action OnWaypointCollected;
     
+    void Awake()
+    {
+        // Force floor height every time a waypoint spawns
+        floorHeight = -0.3f;
+    }
+
     void Start()
     {
         // Find player camera (MRTK's Main Camera)
@@ -56,6 +63,12 @@ public class Waypoint : MonoBehaviour
         // World-anchor this waypoint so it stays in place
         WorldAnchor anchor = gameObject.AddComponent<WorldAnchor>();
         Debug.Log("Waypoint spawned at " + transform.position + " (anchored: " + anchor.isLocated + ")");
+    }
+
+    void OnValidate()
+    {
+        // Keep consistent value if edited in Inspector
+        floorHeight = -0.3f;
     }
     
     void SetupGuideLine()
@@ -96,18 +109,20 @@ public class Waypoint : MonoBehaviour
         // Update guide lines on floor
         if (showGuideLine && leftLine != null && rightLine != null)
         {
-            // Get positions at fixed floor height
+            // Project both points to an absolute floor height in world space
             Vector3 playerPosFloor = new Vector3(playerCamera.position.x, floorHeight, playerCamera.position.z);
             Vector3 waypointPosFloor = new Vector3(transform.position.x, floorHeight, transform.position.z);
             
-            // Calculate direction on floor plane
+            // Direction on floor plane
             Vector3 toWaypoint = waypointPosFloor - playerPosFloor;
-            toWaypoint.y = 0;
+            toWaypoint.y = 0f;
+            if (toWaypoint.sqrMagnitude < 0.0001f)
+            {
+                toWaypoint = Vector3.forward;
+            }
             
-            // Get perpendicular direction for parallel lines
+            // Perpendicular direction for parallel lines
             Vector3 right = Vector3.Cross(toWaypoint.normalized, Vector3.up).normalized;
-            
-            // Create parallel lines offset from center
             float offset = lineSpacing * 0.5f;
             
             // Left line
