@@ -1,5 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
+using Microsoft.MixedReality.Toolkit.UI;
+using TMPro;
+using UnityEngine.Windows.Speech;
 
 public class StatsUiToggle : MonoBehaviour
 {
@@ -17,16 +20,26 @@ public class StatsUiToggle : MonoBehaviour
     public float followDistanceThreshold = 0.15f; // meters
     public bool followPositionOnly = true;
 
+    [Header("MRTK Buttons")]
+    public bool useMrtkButtons = true;
+    public GameObject mrtkButtonPrefab;
+    public Vector3 statsButtonLocalPos = new Vector3(0f, -0.07f, 0f);
+    public Vector3 metronomeButtonLocalPos = new Vector3(0f, -0.16f, 0f);
+    public Vector3 mrtkButtonScale = new Vector3(0.06f, 0.06f, 0.06f);
+
     private GameObject canvasObj;
     private GameObject panelObj;
     private Text panelText;
     private Button toggleButton;
     private Button metronomeButton;
     private Text metronomeButtonText;
+    private GameObject mrtkStatsButton;
+    private GameObject mrtkMetronomeButton;
     private Transform cameraTransform;
     private Vector3 followVelocity;
     private Vector3 worldOffset;
     private Quaternion fixedRotation;
+    private KeywordRecognizer keywordRecognizer;
 
     void Start()
     {
@@ -38,6 +51,7 @@ public class StatsUiToggle : MonoBehaviour
         cameraTransform = Camera.main != null ? Camera.main.transform : null;
 
         CreateUi();
+        SetupVoiceCommands();
     }
 
     void CreateUi()
@@ -87,55 +101,63 @@ public class StatsUiToggle : MonoBehaviour
         textRect.sizeDelta = panelSize;
         textRect.anchoredPosition = Vector2.zero;
 
-        // Toggle button
-        GameObject buttonObj = new GameObject("StatsToggleButton");
-        buttonObj.transform.SetParent(canvasObj.transform, false);
-        Image buttonImage = buttonObj.AddComponent<Image>();
-        buttonImage.color = new Color(0f, 0.6f, 0.1f, 0.9f);
-        toggleButton = buttonObj.AddComponent<Button>();
-        RectTransform buttonRect = buttonObj.GetComponent<RectTransform>();
-        buttonRect.sizeDelta = buttonSize;
-        buttonRect.anchoredPosition = new Vector2(0f, -40f);
+        if (useMrtkButtons && mrtkButtonPrefab != null)
+        {
+            mrtkStatsButton = CreateMrtkButton("StatsButton", statsButtonLocalPos, "Stats", TogglePanel);
+            mrtkMetronomeButton = CreateMrtkButton("MetronomeButton", metronomeButtonLocalPos, "Metronome: Off", ToggleMetronome);
+        }
+        else
+        {
+            // Unity UI fallback
+            GameObject buttonObj = new GameObject("StatsToggleButton");
+            buttonObj.transform.SetParent(canvasObj.transform, false);
+            Image buttonImage = buttonObj.AddComponent<Image>();
+            buttonImage.color = new Color(0f, 0.6f, 0.1f, 0.9f);
+            toggleButton = buttonObj.AddComponent<Button>();
+            RectTransform buttonRect = buttonObj.GetComponent<RectTransform>();
+            buttonRect.sizeDelta = buttonSize;
+            buttonRect.anchoredPosition = new Vector2(0f, -40f);
 
-        // Button label
-        GameObject btnTextObj = new GameObject("ButtonText");
-        btnTextObj.transform.SetParent(buttonObj.transform, false);
-        Text btnText = btnTextObj.AddComponent<Text>();
-        btnText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        btnText.fontSize = 30;
-        btnText.color = Color.white;
-        btnText.alignment = TextAnchor.MiddleCenter;
-        btnText.text = "Stats";
-        RectTransform btnTextRect = btnText.GetComponent<RectTransform>();
-        btnTextRect.sizeDelta = buttonSize;
-        btnTextRect.anchoredPosition = Vector2.zero;
+            // Button label
+            GameObject btnTextObj = new GameObject("ButtonText");
+            btnTextObj.transform.SetParent(buttonObj.transform, false);
+            Text btnText = btnTextObj.AddComponent<Text>();
+            btnText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            btnText.fontSize = 30;
+            btnText.color = Color.white;
+            btnText.alignment = TextAnchor.MiddleCenter;
+            btnText.text = "Stats";
+            RectTransform btnTextRect = btnText.GetComponent<RectTransform>();
+            btnTextRect.sizeDelta = buttonSize;
+            btnTextRect.anchoredPosition = Vector2.zero;
 
-        toggleButton.onClick.AddListener(TogglePanel);
+            toggleButton.onClick.AddListener(TogglePanel);
 
-        // Metronome toggle button
-        GameObject metroBtnObj = new GameObject("MetronomeToggleButton");
-        metroBtnObj.transform.SetParent(canvasObj.transform, false);
-        Image metroBtnImage = metroBtnObj.AddComponent<Image>();
-        metroBtnImage.color = new Color(0.1f, 0.3f, 0.8f, 0.9f);
-        metronomeButton = metroBtnObj.AddComponent<Button>();
-        RectTransform metroBtnRect = metroBtnObj.GetComponent<RectTransform>();
-        metroBtnRect.sizeDelta = buttonSize;
-        metroBtnRect.anchoredPosition = new Vector2(0f, -95f);
+            // Metronome toggle button
+            GameObject metroBtnObj = new GameObject("MetronomeToggleButton");
+            metroBtnObj.transform.SetParent(canvasObj.transform, false);
+            Image metroBtnImage = metroBtnObj.AddComponent<Image>();
+            metroBtnImage.color = new Color(0.1f, 0.3f, 0.8f, 0.9f);
+            metronomeButton = metroBtnObj.AddComponent<Button>();
+            RectTransform metroBtnRect = metroBtnObj.GetComponent<RectTransform>();
+            metroBtnRect.sizeDelta = buttonSize;
+            metroBtnRect.anchoredPosition = new Vector2(0f, -95f);
 
-        // Metronome button label
-        GameObject metroTextObj = new GameObject("MetronomeButtonText");
-        metroTextObj.transform.SetParent(metroBtnObj.transform, false);
-        metronomeButtonText = metroTextObj.AddComponent<Text>();
-        metronomeButtonText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        metronomeButtonText.fontSize = 26;
-        metronomeButtonText.color = Color.white;
-        metronomeButtonText.alignment = TextAnchor.MiddleCenter;
-        metronomeButtonText.text = "Metronome: Off";
-        RectTransform metroTextRect = metronomeButtonText.GetComponent<RectTransform>();
-        metroTextRect.sizeDelta = buttonSize;
-        metroTextRect.anchoredPosition = Vector2.zero;
+            // Metronome button label
+            GameObject metroTextObj = new GameObject("MetronomeButtonText");
+            metroTextObj.transform.SetParent(metroBtnObj.transform, false);
+            metronomeButtonText = metroTextObj.AddComponent<Text>();
+            metronomeButtonText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            metronomeButtonText.fontSize = 26;
+            metronomeButtonText.color = Color.white;
+            metronomeButtonText.alignment = TextAnchor.MiddleCenter;
+            metronomeButtonText.text = "Metronome: Off";
+            RectTransform metroTextRect = metronomeButtonText.GetComponent<RectTransform>();
+            metroTextRect.sizeDelta = buttonSize;
+            metroTextRect.anchoredPosition = Vector2.zero;
 
-        metronomeButton.onClick.AddListener(ToggleMetronome);
+            metronomeButton.onClick.AddListener(ToggleMetronome);
+        }
 
         // Start hidden
         panelObj.SetActive(false);
@@ -156,6 +178,11 @@ public class StatsUiToggle : MonoBehaviour
             metronomeButtonText.text = waypointManager.enableMetronome
                 ? "Metronome: On"
                 : "Metronome: Off";
+        }
+
+        if (mrtkMetronomeButton != null && waypointManager != null)
+        {
+            SetMrtkButtonLabel(mrtkMetronomeButton, waypointManager.enableMetronome ? "Metronome: On" : "Metronome: Off");
         }
     }
 
@@ -226,5 +253,101 @@ public class StatsUiToggle : MonoBehaviour
 
         bool newState = !waypointManager.enableMetronome;
         waypointManager.ToggleMetronome(newState);
+    }
+
+    void SetupVoiceCommands()
+    {
+        string[] keywords = { "show stats", "hide stats", "metronome", "metronome on", "metronome off" };
+
+        keywordRecognizer = new KeywordRecognizer(keywords);
+        keywordRecognizer.OnPhraseRecognized += OnPhraseRecognized;
+        keywordRecognizer.Start();
+    }
+
+    void OnPhraseRecognized(PhraseRecognizedEventArgs args)
+    {
+        string command = args.text.ToLower();
+
+        switch (command)
+        {
+            case "show stats":
+                if (panelObj != null)
+                {
+                    panelObj.SetActive(true);
+                }
+                break;
+
+            case "hide stats":
+                if (panelObj != null)
+                {
+                    panelObj.SetActive(false);
+                }
+                break;
+
+            case "metronome":
+                ToggleMetronome();
+                break;
+
+            case "metronome on":
+                if (waypointManager != null)
+                {
+                    waypointManager.ToggleMetronome(true);
+                }
+                break;
+
+            case "metronome off":
+                if (waypointManager != null)
+                {
+                    waypointManager.ToggleMetronome(false);
+                }
+                break;
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (keywordRecognizer != null && keywordRecognizer.IsRunning)
+        {
+            keywordRecognizer.Stop();
+            keywordRecognizer.Dispose();
+        }
+    }
+
+    GameObject CreateMrtkButton(string name, Vector3 localPos, string label, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject buttonObj = Instantiate(mrtkButtonPrefab, canvasObj.transform);
+        buttonObj.name = name;
+        buttonObj.transform.localPosition = localPos;
+        buttonObj.transform.localRotation = Quaternion.identity;
+        buttonObj.transform.localScale = mrtkButtonScale;
+
+        Interactable interactable = buttonObj.GetComponent<Interactable>();
+        if (interactable != null)
+        {
+            interactable.OnClick.RemoveAllListeners();
+            interactable.OnClick.AddListener(onClick);
+        }
+
+        SetMrtkButtonLabel(buttonObj, label);
+        return buttonObj;
+    }
+
+    void SetMrtkButtonLabel(GameObject buttonObj, string label)
+    {
+        if (buttonObj == null)
+            return;
+
+        TMP_Text tmp = buttonObj.GetComponentInChildren<TMP_Text>(true);
+        if (tmp != null)
+        {
+            tmp.text = label;
+            return;
+        }
+
+        TextMesh textMesh = buttonObj.GetComponentInChildren<TextMesh>(true);
+        if (textMesh != null)
+        {
+            textMesh.text = label;
+        }
     }
 }
