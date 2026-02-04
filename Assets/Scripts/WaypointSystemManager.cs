@@ -13,6 +13,11 @@ public class WaypointSystemManager : MonoBehaviour
     
     [Header("Stats Display (Optional)")]
     public TextMesh statsText;
+    public bool autoCreateStatsText = true;
+    public float statsDistanceFromCamera = 2.0f;
+    public float statsHeightOffset = -0.15f;
+    public float statsTextScale = 0.012f;
+    public bool hideStatsText = false;
     
     [Header("Visual Metronome")]
     public bool enableMetronome = false;
@@ -45,6 +50,16 @@ public class WaypointSystemManager : MonoBehaviour
             Debug.LogError("WaypointSystemManager: Waypoint prefab not assigned!");
             return;
         }
+
+        if (statsText == null && autoCreateStatsText)
+        {
+            CreateStatsText();
+        }
+
+        if (statsText != null)
+        {
+            statsText.gameObject.SetActive(!hideStatsText);
+        }
         
         // Start the session after a moment (let user orient)
         Invoke("StartSession", 1f);
@@ -64,6 +79,24 @@ public class WaypointSystemManager : MonoBehaviour
         
         SpawnNextWaypoint();
         Debug.Log("Waypoint session started! Collect " + totalWaypoints + " waypoints.");
+    }
+
+    void CreateStatsText()
+    {
+        GameObject statsObj = new GameObject("StatsText");
+        statsText = statsObj.AddComponent<TextMesh>();
+        statsText.fontSize = 48;
+        statsText.color = Color.white;
+        statsText.alignment = TextAlignment.Center;
+        statsText.anchor = TextAnchor.MiddleCenter;
+        statsObj.transform.localScale = Vector3.one * statsTextScale;
+
+        if (playerCamera != null)
+        {
+            statsObj.transform.SetParent(playerCamera, false);
+            statsObj.transform.localPosition = new Vector3(0f, statsHeightOffset, statsDistanceFromCamera);
+            statsObj.transform.localRotation = Quaternion.identity;
+        }
     }
     
     void SpawnNextWaypoint()
@@ -159,6 +192,23 @@ public class WaypointSystemManager : MonoBehaviour
         int seconds = (int)(elapsed % 60);
         
         statsText.text = string.Format(
+            "Waypoints: {0}/{1}\nDistance: {2:F1}m\nTime: {3:00}:{4:00}",
+            waypointsCollected, totalWaypoints, totalDistanceTraveled, minutes, seconds
+        );
+    }
+
+    public string GetStatsText()
+    {
+        if (!sessionActive)
+        {
+            return "Session not started";
+        }
+
+        float elapsed = Time.time - sessionStartTime;
+        int minutes = (int)(elapsed / 60);
+        int seconds = (int)(elapsed % 60);
+
+        return string.Format(
             "Waypoints: {0}/{1}\nDistance: {2:F1}m\nTime: {3:00}:{4:00}",
             waypointsCollected, totalWaypoints, totalDistanceTraveled, minutes, seconds
         );
