@@ -31,6 +31,7 @@ public class WaypointSystemManager : MonoBehaviour
     private bool sessionActive = false;
     private float totalDistanceTraveled = 0f;
     private Vector3 lastCameraPosition;
+    private Waypoint currentWaypoint;
     private GameObject metronomeObject;
     private Renderer metronomeRenderer;
     private float metronomeBeatTime;
@@ -118,6 +119,7 @@ public class WaypointSystemManager : MonoBehaviour
         Waypoint waypoint = waypointObj.GetComponent<Waypoint>();
         if (waypoint != null)
         {
+            currentWaypoint = waypoint;
             waypoint.OnWaypointCollected += OnWaypointCollected;
         }
         else
@@ -155,6 +157,7 @@ public class WaypointSystemManager : MonoBehaviour
     void OnWaypointCollected()
     {
         waypointsCollected++;
+        currentWaypoint = null;
         Debug.Log("Waypoints collected: " + waypointsCollected + " / " + totalWaypoints);
         
         UpdateStats();
@@ -192,8 +195,13 @@ public class WaypointSystemManager : MonoBehaviour
         int seconds = (int)(elapsed % 60);
         
         statsText.text = string.Format(
-            "Waypoints: {0}/{1}\nDistance: {2:F1}m\nTime: {3:00}:{4:00}",
-            waypointsCollected, totalWaypoints, totalDistanceTraveled, minutes, seconds
+            "Waypoints: {0}/{1}\nDistance: {2:F1}m\nOff-course: {3:F0}%\nTime: {4:00}:{5:00}",
+            waypointsCollected,
+            totalWaypoints,
+            totalDistanceTraveled,
+            currentWaypoint != null ? currentWaypoint.CurrentOffCoursePercent : 0f,
+            minutes,
+            seconds
         );
     }
 
@@ -209,8 +217,13 @@ public class WaypointSystemManager : MonoBehaviour
         int seconds = (int)(elapsed % 60);
 
         return string.Format(
-            "Waypoints: {0}/{1}\nDistance: {2:F1}m\nTime: {3:00}:{4:00}",
-            waypointsCollected, totalWaypoints, totalDistanceTraveled, minutes, seconds
+            "Waypoints: {0}/{1}\nDistance: {2:F1}m\nOff-course: {3:F0}%\nTime: {4:00}:{5:00}",
+            waypointsCollected,
+            totalWaypoints,
+            totalDistanceTraveled,
+            currentWaypoint != null ? currentWaypoint.CurrentOffCoursePercent : 0f,
+            minutes,
+            seconds
         );
     }
     

@@ -9,7 +9,7 @@ public class StatsUiToggle : MonoBehaviour
     [Header("UI Layout")]
     public float uiDistance = 1.6f;
     public Vector3 uiOffset = new Vector3(0.35f, -0.25f, 0f); // bottom-right of view
-    public Vector2 panelSize = new Vector2(220f, 120f);
+    public Vector2 panelSize = new Vector2(260f, 180f);
     public Vector2 buttonSize = new Vector2(140f, 45f);
     public float followSpeed = 8f;
     public float rotateSpeed = 10f;
@@ -68,7 +68,7 @@ public class StatsUiToggle : MonoBehaviour
         textObj.transform.SetParent(panelObj.transform, false);
         panelText = textObj.AddComponent<Text>();
         panelText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        panelText.fontSize = 32;
+        panelText.fontSize = 26;
         panelText.color = Color.white;
         panelText.alignment = TextAnchor.MiddleCenter;
         RectTransform textRect = panelText.GetComponent<RectTransform>();

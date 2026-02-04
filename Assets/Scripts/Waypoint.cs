@@ -26,6 +26,11 @@ public class Waypoint : MonoBehaviour
     private GameObject rightLineObject;
     private LineRenderer leftLine;
     private LineRenderer rightLine;
+    private Vector3 guideStart;
+    private Vector3 guideEnd;
+    private bool guideInitialized = false;
+
+    public float CurrentOffCoursePercent { get; private set; }
     
     // Called when player walks into waypoint
     public System.Action OnWaypointCollected;
@@ -33,7 +38,7 @@ public class Waypoint : MonoBehaviour
     void Awake()
     {
         // Force floor height every time a waypoint spawns
-        floorHeight = -0.3f;
+        floorHeight = -0.4f;
     }
 
     void Start()
@@ -58,6 +63,7 @@ public class Waypoint : MonoBehaviour
         if (showGuideLine)
         {
             SetupGuideLine();
+            InitializeGuideLinePath();
         }
         
         // World-anchor this waypoint so it stays in place
@@ -100,39 +106,42 @@ public class Waypoint : MonoBehaviour
         line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         line.receiveShadows = false;
     }
+
+    void InitializeGuideLinePath()
+    {
+        if (leftLine == null || rightLine == null || playerCamera == null)
+            return;
+
+        // Static path from player spawn position to waypoint position
+        guideStart = new Vector3(playerCamera.position.x, floorHeight, playerCamera.position.z);
+        guideEnd = new Vector3(transform.position.x, floorHeight, transform.position.z);
+
+        Vector3 toWaypoint = guideEnd - guideStart;
+        toWaypoint.y = 0f;
+        if (toWaypoint.sqrMagnitude < 0.0001f)
+        {
+            toWaypoint = Vector3.forward;
+        }
+
+        Vector3 right = Vector3.Cross(toWaypoint.normalized, Vector3.up).normalized;
+        float offset = lineSpacing * 0.5f;
+
+        leftLine.SetPosition(0, guideStart + right * offset);
+        leftLine.SetPosition(1, guideEnd + right * offset);
+
+        rightLine.SetPosition(0, guideStart - right * offset);
+        rightLine.SetPosition(1, guideEnd - right * offset);
+
+        guideInitialized = true;
+    }
     
     void Update()
     {
         if (collected || playerCamera == null)
             return;
         
-        // Update guide lines on floor
-        if (showGuideLine && leftLine != null && rightLine != null)
-        {
-            // Project both points to an absolute floor height in world space
-            Vector3 playerPosFloor = new Vector3(playerCamera.position.x, floorHeight, playerCamera.position.z);
-            Vector3 waypointPosFloor = new Vector3(transform.position.x, floorHeight, transform.position.z);
-            
-            // Direction on floor plane
-            Vector3 toWaypoint = waypointPosFloor - playerPosFloor;
-            toWaypoint.y = 0f;
-            if (toWaypoint.sqrMagnitude < 0.0001f)
-            {
-                toWaypoint = Vector3.forward;
-            }
-            
-            // Perpendicular direction for parallel lines
-            Vector3 right = Vector3.Cross(toWaypoint.normalized, Vector3.up).normalized;
-            float offset = lineSpacing * 0.5f;
-            
-            // Left line
-            leftLine.SetPosition(0, playerPosFloor + right * offset);
-            leftLine.SetPosition(1, waypointPosFloor + right * offset);
-            
-            // Right line
-            rightLine.SetPosition(0, playerPosFloor - right * offset);
-            rightLine.SetPosition(1, waypointPosFloor - right * offset);
-        }
+        // Update off-course percentage
+        UpdateOffCoursePercent();
         
         // Get distance from player's head position to this waypoint
         float distance = Vector3.Distance(playerCamera.position, transform.position);
@@ -155,6 +164,41 @@ public class Waypoint : MonoBehaviour
         {
             Collect();
         }
+    }
+
+    void UpdateOffCoursePercent()
+    {
+        if (!guideInitialized || playerCamera == null)
+        {
+            CurrentOffCoursePercent = 0f;
+            return;
+        }
+
+        Vector3 playerPosFloor = new Vector3(playerCamera.position.x, floorHeight, playerCamera.position.z);
+
+        float distanceToPath = DistancePointToSegmentXZ(guideStart, guideEnd, playerPosFloor);
+        float halfSpacing = Mathf.Max(0.001f, lineSpacing * 0.5f);
+
+        CurrentOffCoursePercent = Mathf.Clamp01(distanceToPath / halfSpacing) * 100f;
+    }
+
+    float DistancePointToSegmentXZ(Vector3 a, Vector3 b, Vector3 p)
+    {
+        Vector2 a2 = new Vector2(a.x, a.z);
+        Vector2 b2 = new Vector2(b.x, b.z);
+        Vector2 p2 = new Vector2(p.x, p.z);
+
+        Vector2 ab = b2 - a2;
+        float abLenSq = ab.sqrMagnitude;
+        if (abLenSq < 0.0001f)
+        {
+            return Vector2.Distance(p2, a2);
+        }
+
+        float t = Vector2.Dot(p2 - a2, ab) / abLenSq;
+        t = Mathf.Clamp01(t);
+        Vector2 closest = a2 + ab * t;
+        return Vector2.Distance(p2, closest);
     }
     
     void Collect()
