@@ -14,14 +14,17 @@ public class Waypoint : MonoBehaviour
     public bool showGuideLine = true;
     public Color lineColor = Color.green;
     public float lineWidth = 0.08f;
-    public float lineSpacing = 0.3f;  // Distance between the two parallel lines
+    public float lineSpacing = 0.4f;  // Distance between the two parallel lines
+    public float floorHeight = 0.005f;  // Height above floor (5mm)
     
     private Vector3 originalScale;
     private Renderer rend;
     private bool collected = false;
     private Transform playerCamera;
-    private LineRenderer guideLineLeft;
-    private LineRenderer guideLineRight;
+    private GameObject leftLineObject;
+    private GameObject rightLineObject;
+    private LineRenderer leftLine;
+    private LineRenderer rightLine;
     
     // Called when player walks into waypoint
     public System.Action OnWaypointCollected;
@@ -57,25 +60,32 @@ public class Waypoint : MonoBehaviour
     
     void SetupGuideLine()
     {
-        // Create left guide line
-        guideLineLeft = gameObject.AddComponent<LineRenderer>();
-        guideLineLeft.startWidth = lineWidth;
-        guideLineLeft.endWidth = lineWidth;
-        guideLineLeft.material = new Material(Shader.Find("Sprites/Default"));
-        guideLineLeft.startColor = lineColor;
-        guideLineLeft.endColor = lineColor;
-        guideLineLeft.positionCount = 2;
-        guideLineLeft.useWorldSpace = true;
+        // Create separate GameObjects for each line
+        leftLineObject = new GameObject("LeftGuideLine");
+        leftLineObject.transform.SetParent(transform);
+        leftLine = leftLineObject.AddComponent<LineRenderer>();
         
-        // Create right guide line
-        guideLineRight = gameObject.AddComponent<LineRenderer>();
-        guideLineRight.startWidth = lineWidth;
-        guideLineRight.endWidth = lineWidth;
-        guideLineRight.material = new Material(Shader.Find("Sprites/Default"));
-        guideLineRight.startColor = lineColor;
-        guideLineRight.endColor = lineColor;
-        guideLineRight.positionCount = 2;
-        guideLineRight.useWorldSpace = true;
+        rightLineObject = new GameObject("RightGuideLine");
+        rightLineObject.transform.SetParent(transform);
+        rightLine = rightLineObject.AddComponent<LineRenderer>();
+        
+        // Configure both lines
+        ConfigureLine(leftLine);
+        ConfigureLine(rightLine);
+    }
+    
+    void ConfigureLine(LineRenderer line)
+    {
+        line.startWidth = lineWidth;
+        line.endWidth = lineWidth;
+        line.material = new Material(Shader.Find("Unlit/Color"));
+        line.material.color = lineColor;
+        line.startColor = lineColor;
+        line.endColor = lineColor;
+        line.positionCount = 2;
+        line.useWorldSpace = true;
+        line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        line.receiveShadows = false;
     }
     
     void Update()
@@ -83,41 +93,30 @@ public class Waypoint : MonoBehaviour
         if (collected || playerCamera == null)
             return;
         
-        // Update guide lines to create walking path on floor
-        if (showGuideLine && guideLineLeft != null && guideLineRight != null)
+        // Update guide lines on floor
+        if (showGuideLine && leftLine != null && rightLine != null)
         {
-            // Get direction from player to waypoint on ground plane
-            Vector3 playerPos = playerCamera.position;
-            playerPos.y = 0;
+            // Get positions at fixed floor height
+            Vector3 playerPosFloor = new Vector3(playerCamera.position.x, floorHeight, playerCamera.position.z);
+            Vector3 waypointPosFloor = new Vector3(transform.position.x, floorHeight, transform.position.z);
             
-            Vector3 waypointPos = transform.position;
-            waypointPos.y = 0;
+            // Calculate direction on floor plane
+            Vector3 toWaypoint = waypointPosFloor - playerPosFloor;
+            toWaypoint.y = 0;
             
-            Vector3 direction = (waypointPos - playerPos).normalized;
+            // Get perpendicular direction for parallel lines
+            Vector3 right = Vector3.Cross(toWaypoint.normalized, Vector3.up).normalized;
             
-            // Get perpendicular vector for spacing the lines
-            Vector3 perpendicular = Vector3.Cross(direction, Vector3.up).normalized;
-            
-            // Calculate positions for parallel lines (like railroad tracks)
-            float halfSpacing = lineSpacing / 2f;
+            // Create parallel lines offset from center
+            float offset = lineSpacing * 0.5f;
             
             // Left line
-            Vector3 leftStart = playerPos + perpendicular * halfSpacing;
-            leftStart.y = 0.005f;  // Just above floor
-            Vector3 leftEnd = waypointPos + perpendicular * halfSpacing;
-            leftEnd.y = 0.005f;
-            
-            guideLineLeft.SetPosition(0, leftStart);
-            guideLineLeft.SetPosition(1, leftEnd);
+            leftLine.SetPosition(0, playerPosFloor + right * offset);
+            leftLine.SetPosition(1, waypointPosFloor + right * offset);
             
             // Right line
-            Vector3 rightStart = playerPos - perpendicular * halfSpacing;
-            rightStart.y = 0.005f;
-            Vector3 rightEnd = waypointPos - perpendicular * halfSpacing;
-            rightEnd.y = 0.005f;
-            
-            guideLineRight.SetPosition(0, rightStart);
-            guideLineRight.SetPosition(1, rightEnd);
+            rightLine.SetPosition(0, playerPosFloor - right * offset);
+            rightLine.SetPosition(1, waypointPosFloor - right * offset);
         }
         
         // Get distance from player's head position to this waypoint
