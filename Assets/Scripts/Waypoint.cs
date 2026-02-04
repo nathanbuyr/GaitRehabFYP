@@ -15,8 +15,10 @@ public class Waypoint : MonoBehaviour
     public Color lineColor = Color.green;
     public float lineWidth = 0.08f;
     public float lineSpacing = 0.4f;  // Distance between the two parallel lines
-    [SerializeField]
-    private float floorHeight = -0.3f;  // Height above floor (30cm below world origin)
+    public bool useCameraRelativeFloor = true;
+    public float assumedEyeHeight = 1.6f;  // meters (used if camera-relative floor is enabled)
+    public float floorHeight = 0f;  // Absolute floor height if not camera-relative
+    public float floorOffset = 0.02f;  // Raise lines slightly above floor to avoid clipping
     
     private Vector3 originalScale;
     private Renderer rend;
@@ -35,12 +37,6 @@ public class Waypoint : MonoBehaviour
     // Called when player walks into waypoint
     public System.Action OnWaypointCollected;
     
-    void Awake()
-    {
-        // Force floor height every time a waypoint spawns
-        floorHeight = -0.4f;
-    }
-
     void Start()
     {
         // Find player camera (MRTK's Main Camera)
@@ -73,8 +69,8 @@ public class Waypoint : MonoBehaviour
 
     void OnValidate()
     {
-        // Keep consistent value if edited in Inspector
-        floorHeight = -0.3f;
+        assumedEyeHeight = Mathf.Max(0.5f, assumedEyeHeight);
+        floorOffset = Mathf.Clamp(floorOffset, 0f, 0.2f);
     }
     
     void SetupGuideLine()
@@ -97,8 +93,16 @@ public class Waypoint : MonoBehaviour
     {
         line.startWidth = lineWidth;
         line.endWidth = lineWidth;
-        line.material = new Material(Shader.Find("Unlit/Color"));
-        line.material.color = lineColor;
+        Shader lineShader = Shader.Find("Sprites/Default");
+        if (lineShader == null)
+        {
+            lineShader = Shader.Find("Unlit/Color");
+        }
+        if (lineShader != null)
+        {
+            line.material = new Material(lineShader);
+            line.material.color = lineColor;
+        }
         line.startColor = lineColor;
         line.endColor = lineColor;
         line.positionCount = 2;
@@ -113,8 +117,9 @@ public class Waypoint : MonoBehaviour
             return;
 
         // Static path from player spawn position to waypoint position
-        guideStart = new Vector3(playerCamera.position.x, floorHeight, playerCamera.position.z);
-        guideEnd = new Vector3(transform.position.x, floorHeight, transform.position.z);
+        float floorY = GetFloorY();
+        guideStart = new Vector3(playerCamera.position.x, floorY, playerCamera.position.z);
+        guideEnd = new Vector3(transform.position.x, floorY, transform.position.z);
 
         Vector3 toWaypoint = guideEnd - guideStart;
         toWaypoint.y = 0f;
@@ -174,12 +179,22 @@ public class Waypoint : MonoBehaviour
             return;
         }
 
-        Vector3 playerPosFloor = new Vector3(playerCamera.position.x, floorHeight, playerCamera.position.z);
+        Vector3 playerPosFloor = new Vector3(playerCamera.position.x, guideStart.y, playerCamera.position.z);
 
         float distanceToPath = DistancePointToSegmentXZ(guideStart, guideEnd, playerPosFloor);
         float halfSpacing = Mathf.Max(0.001f, lineSpacing * 0.5f);
 
         CurrentOffCoursePercent = Mathf.Clamp01(distanceToPath / halfSpacing) * 100f;
+    }
+
+    float GetFloorY()
+    {
+        if (useCameraRelativeFloor && playerCamera != null)
+        {
+            return (playerCamera.position.y - assumedEyeHeight) + floorOffset;
+        }
+
+        return floorHeight + floorOffset;
     }
 
     float DistancePointToSegmentXZ(Vector3 a, Vector3 b, Vector3 p)

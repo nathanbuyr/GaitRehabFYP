@@ -7,10 +7,10 @@ public class StatsUiToggle : MonoBehaviour
     public WaypointSystemManager waypointManager;
 
     [Header("UI Layout")]
-    public float uiDistance = 1.6f;
+    public float uiDistance = 1.0f;
     public Vector3 uiOffset = new Vector3(0.35f, -0.25f, 0f); // bottom-right of view
-    public Vector2 panelSize = new Vector2(260f, 180f);
-    public Vector2 buttonSize = new Vector2(140f, 45f);
+    public Vector2 panelSize = new Vector2(300f, 200f);
+    public Vector2 buttonSize = new Vector2(180f, 60f);
     public float followSpeed = 8f;
     public float rotateSpeed = 10f;
 
@@ -48,7 +48,7 @@ public class StatsUiToggle : MonoBehaviour
         {
             canvasObj.transform.position = GetTargetPosition();
             canvasObj.transform.rotation = GetTargetRotation();
-            canvasObj.transform.localScale = Vector3.one * 0.0015f; // scale for world-space UI
+            canvasObj.transform.localScale = Vector3.one * 0.0022f; // scale for world-space UI
         }
 
         RectTransform canvasRect = canvasObj.GetComponent<RectTransform>();
@@ -68,7 +68,7 @@ public class StatsUiToggle : MonoBehaviour
         textObj.transform.SetParent(panelObj.transform, false);
         panelText = textObj.AddComponent<Text>();
         panelText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        panelText.fontSize = 26;
+        panelText.fontSize = 28;
         panelText.color = Color.white;
         panelText.alignment = TextAnchor.MiddleCenter;
         RectTransform textRect = panelText.GetComponent<RectTransform>();
@@ -90,7 +90,7 @@ public class StatsUiToggle : MonoBehaviour
         btnTextObj.transform.SetParent(buttonObj.transform, false);
         Text btnText = btnTextObj.AddComponent<Text>();
         btnText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        btnText.fontSize = 28;
+        btnText.fontSize = 30;
         btnText.color = Color.white;
         btnText.alignment = TextAnchor.MiddleCenter;
         btnText.text = "Stats";
@@ -115,7 +115,7 @@ public class StatsUiToggle : MonoBehaviour
         metroTextObj.transform.SetParent(metroBtnObj.transform, false);
         metronomeButtonText = metroTextObj.AddComponent<Text>();
         metronomeButtonText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        metronomeButtonText.fontSize = 24;
+        metronomeButtonText.fontSize = 26;
         metronomeButtonText.color = Color.white;
         metronomeButtonText.alignment = TextAnchor.MiddleCenter;
         metronomeButtonText.text = "Metronome: Off";

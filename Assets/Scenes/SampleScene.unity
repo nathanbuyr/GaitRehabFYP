@@ -313,6 +313,7 @@ GameObject:
   - component: {fileID: 1111534381}
   - component: {fileID: 1111534380}
   - component: {fileID: 1111534382}
+  - component: {fileID: 1111534383}
   m_Layer: 0
   m_Name: WaypointManager
   m_TagString: Untagged
@@ -339,6 +340,11 @@ MonoBehaviour:
   maxDistance: 3
   waypointHeight: 1.5
   statsText: {fileID: 0}
+  autoCreateStatsText: 1
+  statsDistanceFromCamera: 1.5
+  statsHeightOffset: 0.2
+  statsTextScale: 0.02
+  hideStatsText: 1
   enableMetronome: 0
   metronomePrefab: {fileID: 0}
   metronomeBPM: 60
@@ -370,6 +376,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   waypointManager: {fileID: 0}
+--- !u!114 &1111534383
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1111534379}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e7ee73cc4cdb974c90cfc0167612c19, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  waypointManager: {fileID: 1111534380}
+  uiDistance: 1.6
+  uiOffset: {x: 0.35, y: -0.25, z: 0}
+  panelSize: {x: 220, y: 120}
+  buttonSize: {x: 140, y: 45}
+  followSpeed: 8
+  rotateSpeed: 10
 --- !u!1 &1114040580
 GameObject:
   m_ObjectHideFlags: 0
