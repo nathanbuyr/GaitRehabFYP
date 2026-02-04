@@ -13,6 +13,9 @@ public class StatsUiToggle : MonoBehaviour
     public Vector2 buttonSize = new Vector2(180f, 60f);
     public float followSpeed = 8f;
     public float rotateSpeed = 10f;
+    public float followAngleThreshold = 10f; // degrees
+    public float followDistanceThreshold = 0.15f; // meters
+    public bool followPositionOnly = true;
 
     private GameObject canvasObj;
     private GameObject panelObj;
@@ -21,6 +24,9 @@ public class StatsUiToggle : MonoBehaviour
     private Button metronomeButton;
     private Text metronomeButtonText;
     private Transform cameraTransform;
+    private Vector3 followVelocity;
+    private Vector3 worldOffset;
+    private Quaternion fixedRotation;
 
     void Start()
     {
@@ -49,6 +55,12 @@ public class StatsUiToggle : MonoBehaviour
             canvasObj.transform.position = GetTargetPosition();
             canvasObj.transform.rotation = GetTargetRotation();
             canvasObj.transform.localScale = Vector3.one * 0.0022f; // scale for world-space UI
+        }
+
+        if (cameraTransform != null)
+        {
+            worldOffset = canvasObj.transform.position - cameraTransform.position;
+            fixedRotation = canvasObj.transform.rotation;
         }
 
         RectTransform canvasRect = canvasObj.GetComponent<RectTransform>();
@@ -152,11 +164,31 @@ public class StatsUiToggle : MonoBehaviour
         if (canvasObj == null || cameraTransform == null)
             return;
 
-        Vector3 targetPos = GetTargetPosition();
-        Quaternion targetRot = GetTargetRotation();
+        Vector3 targetPos = followPositionOnly ? cameraTransform.position + worldOffset : GetTargetPosition();
+        Quaternion targetRot = followPositionOnly ? fixedRotation : GetTargetRotation();
 
-        canvasObj.transform.position = Vector3.Lerp(canvasObj.transform.position, targetPos, Time.deltaTime * followSpeed);
-        canvasObj.transform.rotation = Quaternion.Slerp(canvasObj.transform.rotation, targetRot, Time.deltaTime * rotateSpeed);
+        float angleToTarget = Vector3.Angle(cameraTransform.forward, targetPos - cameraTransform.position);
+        float distanceToTarget = Vector3.Distance(canvasObj.transform.position, targetPos);
+
+        // Only move the UI if it's outside a small deadzone
+        if (angleToTarget > followAngleThreshold || distanceToTarget > followDistanceThreshold)
+        {
+            canvasObj.transform.position = Vector3.SmoothDamp(
+                canvasObj.transform.position,
+                targetPos,
+                ref followVelocity,
+                1f / Mathf.Max(0.01f, followSpeed)
+            );
+
+            if (!followPositionOnly)
+            {
+                canvasObj.transform.rotation = Quaternion.Slerp(
+                    canvasObj.transform.rotation,
+                    targetRot,
+                    Time.deltaTime * rotateSpeed
+                );
+            }
+        }
     }
 
     Vector3 GetTargetPosition()
