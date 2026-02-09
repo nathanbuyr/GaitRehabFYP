@@ -18,8 +18,8 @@ public class Waypoint : MonoBehaviour
     public bool useCameraRelativeFloor = true;
     public float assumedEyeHeight = 1.6f;  // meters (used if camera-relative floor is enabled)
     public float floorHeight = 0f;  // Absolute floor height if not camera-relative
-    public float floorOffset = 2.06f;  // Raise lines slightly above floor to avoid clipping
-    public float guideExtension = 3.0f;  // Extend lines past waypoint (meters)
+    public float floorOffset = 100.00f;  // Raise lines slightly above floor to avoid clipping
+    public float guideExtension = 15.0f;  // Extend lines past waypoint (meters)
     
     private Vector3 originalScale;
     private Renderer rend;

@@ -383,6 +383,10 @@ public class WaypointSystemManager : MonoBehaviour
         {
             metronomeObject.SetActive(enabled);
         }
+        if (metronomeArcObject != null)
+        {
+            metronomeArcObject.SetActive(enabled && showMetronomeArc);
+        }
         else if (enabled && sessionActive)
         {
             SetupMetronome();
