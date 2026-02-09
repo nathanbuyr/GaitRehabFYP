@@ -18,8 +18,15 @@ public class Waypoint : MonoBehaviour
     public bool useCameraRelativeFloor = true;
     public float assumedEyeHeight = 1.6f;  // meters (used if camera-relative floor is enabled)
     public float floorHeight = 0f;  // Absolute floor height if not camera-relative
-    public float floorOffset = 100.00f;  // Raise lines slightly above floor to avoid clipping
+    public float floorOffset = 0.02f;  // Raise lines slightly above floor to avoid clipping
     public float guideExtension = 15.0f;  // Extend lines past waypoint (meters)
+
+    [Header("Guide Markers (Visibility)")]
+    public bool showGuideMarkers = true;
+    public float markerSpacing = 1.5f; // meters between markers
+    public float markerHeight = 0.5f;  // marker height above floor
+    public float markerSize = 0.06f;   // marker thickness
+    public Color markerColor = Color.green;
     
     private Vector3 originalScale;
     private Renderer rend;
@@ -29,9 +36,11 @@ public class Waypoint : MonoBehaviour
     private GameObject rightLineObject;
     private LineRenderer leftLine;
     private LineRenderer rightLine;
+    private readonly System.Collections.Generic.List<GameObject> guideMarkers = new System.Collections.Generic.List<GameObject>();
     private Vector3 guideStart;
     private Vector3 guideEnd;
     private bool guideInitialized = false;
+    private float lastFloorY = float.NaN;
 
     public float CurrentOffCoursePercent { get; private set; }
     
@@ -119,6 +128,7 @@ public class Waypoint : MonoBehaviour
 
         // Static path from player spawn position to waypoint position
         float floorY = GetFloorY();
+        lastFloorY = floorY;
         guideStart = new Vector3(playerCamera.position.x, floorY, playerCamera.position.z);
         guideEnd = new Vector3(transform.position.x, floorY, transform.position.z);
 
@@ -142,12 +152,82 @@ public class Waypoint : MonoBehaviour
         rightLine.SetPosition(1, extendedEnd - right * offset);
 
         guideInitialized = true;
+
+        if (showGuideMarkers)
+        {
+            BuildGuideMarkers(guideStart, extendedEnd);
+        }
+    }
+
+    void BuildGuideMarkers(Vector3 start, Vector3 end)
+    {
+        ClearGuideMarkers();
+
+        Vector3 flatStart = new Vector3(start.x, 0f, start.z);
+        Vector3 flatEnd = new Vector3(end.x, 0f, end.z);
+        Vector3 dir = (flatEnd - flatStart);
+        float length = dir.magnitude;
+        if (length < 0.01f)
+            return;
+
+        dir.Normalize();
+        int count = Mathf.FloorToInt(length / Mathf.Max(0.1f, markerSpacing));
+        for (int i = 1; i <= count; i++)
+        {
+            Vector3 pos = flatStart + dir * (i * markerSpacing);
+            pos.y = GetFloorY() + markerHeight;
+
+            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            marker.name = "GuideMarker";
+            Destroy(marker.GetComponent<Collider>());
+            marker.transform.SetParent(transform, false);
+            marker.transform.position = pos;
+            marker.transform.localScale = new Vector3(markerSize, markerHeight * 0.5f, markerSize);
+
+            Renderer markerRenderer = marker.GetComponent<Renderer>();
+            if (markerRenderer != null)
+            {
+                Shader markerShader = Shader.Find("Sprites/Default");
+                if (markerShader == null)
+                {
+                    markerShader = Shader.Find("Unlit/Color");
+                }
+                if (markerShader != null)
+                {
+                    markerRenderer.material = new Material(markerShader);
+                    markerRenderer.material.color = markerColor;
+                }
+            }
+
+            guideMarkers.Add(marker);
+        }
+    }
+
+    void ClearGuideMarkers()
+    {
+        for (int i = 0; i < guideMarkers.Count; i++)
+        {
+            if (guideMarkers[i] != null)
+            {
+                Destroy(guideMarkers[i]);
+            }
+        }
+        guideMarkers.Clear();
     }
     
     void Update()
     {
         if (collected || playerCamera == null)
             return;
+
+        if (showGuideLine && guideInitialized)
+        {
+            float currentFloorY = GetFloorY();
+            if (!Mathf.Approximately(currentFloorY, lastFloorY))
+            {
+                InitializeGuideLinePath();
+            }
+        }
         
         // Update off-course percentage
         UpdateOffCoursePercent();
@@ -239,5 +319,10 @@ public class Waypoint : MonoBehaviour
         
         // Destroy after brief delay
         Destroy(gameObject, 0.3f);
+    }
+
+    void OnDestroy()
+    {
+        ClearGuideMarkers();
     }
 }
