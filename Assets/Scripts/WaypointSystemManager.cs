@@ -287,6 +287,7 @@ public class WaypointSystemManager : MonoBehaviour
         
         // Calculate pendulum swing on semicircular arc (slower swing)
         float beatProgress = (Time.time % metronomeBeatTime) / metronomeBeatTime;
+        beatProgress = (beatProgress + 0.5f) % 1f; // invert phase (opposite direction)
         float angle = Mathf.Sin(beatProgress * Mathf.PI * 2f) * 45f;  // ±45 degrees swing (reduced from 60)
         
         // Convert angle to radians
@@ -300,9 +301,9 @@ public class WaypointSystemManager : MonoBehaviour
         right.y = 0;
         right.Normalize();
         
-        // Calculate position on arc (x = sin, y = -cos for downward arc)
+        // Calculate position on arc (x = sin, y = +cos for upward arc)
         float xOffset = Mathf.Sin(angleRad) * arcRadius;
-        float yOffset = -Mathf.Cos(angleRad) * arcRadius + arcRadius;  // Offset so arc bottom is at floor
+        float yOffset = Mathf.Cos(angleRad) * arcRadius + arcRadius;  // Offset so arc top is above center
         
         // Apply arc position
         Vector3 metronomePos = centerPos + (right * xOffset);
