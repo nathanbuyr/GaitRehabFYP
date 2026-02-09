@@ -18,7 +18,8 @@ public class Waypoint : MonoBehaviour
     public bool useCameraRelativeFloor = true;
     public float assumedEyeHeight = 1.6f;  // meters (used if camera-relative floor is enabled)
     public float floorHeight = 0f;  // Absolute floor height if not camera-relative
-    public float floorOffset = 0.02f;  // Raise lines slightly above floor to avoid clipping
+    public float floorOffset = 2.06f;  // Raise lines slightly above floor to avoid clipping
+    public float guideExtension = 3.0f;  // Extend lines past waypoint (meters)
     
     private Vector3 originalScale;
     private Renderer rend;
@@ -131,11 +132,14 @@ public class Waypoint : MonoBehaviour
         Vector3 right = Vector3.Cross(toWaypoint.normalized, Vector3.up).normalized;
         float offset = lineSpacing * 0.5f;
 
+        // Extend line past waypoint for better visibility
+        Vector3 extendedEnd = guideEnd + toWaypoint.normalized * guideExtension;
+
         leftLine.SetPosition(0, guideStart + right * offset);
-        leftLine.SetPosition(1, guideEnd + right * offset);
+        leftLine.SetPosition(1, extendedEnd + right * offset);
 
         rightLine.SetPosition(0, guideStart - right * offset);
-        rightLine.SetPosition(1, guideEnd - right * offset);
+        rightLine.SetPosition(1, extendedEnd - right * offset);
 
         guideInitialized = true;
     }
