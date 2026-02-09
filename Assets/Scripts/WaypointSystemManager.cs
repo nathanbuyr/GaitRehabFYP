@@ -24,6 +24,7 @@ public class WaypointSystemManager : MonoBehaviour
     public GameObject metronomePrefab;  // Assign a small sphere/cube
     public float metronomeBPM = 40f;    // Beats per minute (slower default - adjust to your preference)
     public Color metronomeColor = Color.yellow;
+    public float metronomeHeightOffset = -0.3f; // Lower than gaze (meters)
     
     private Transform playerCamera;
     private int waypointsCollected = 0;
@@ -283,7 +284,7 @@ public class WaypointSystemManager : MonoBehaviour
         forward.Normalize();
         
         Vector3 centerPos = playerCamera.position + forward * 1.5f;
-        centerPos.y = playerCamera.position.y;  // Match eye level
+        centerPos.y = playerCamera.position.y + metronomeHeightOffset;  // Lower than eye level
         
         // Calculate pendulum swing on semicircular arc (slower swing)
         float beatProgress = (Time.time % metronomeBeatTime) / metronomeBeatTime;
@@ -301,9 +302,9 @@ public class WaypointSystemManager : MonoBehaviour
         right.y = 0;
         right.Normalize();
         
-        // Calculate position on arc (x = sin, y = +cos for upward arc)
+        // Calculate position on arc (x = sin, y = +cos centered at gaze height)
         float xOffset = Mathf.Sin(angleRad) * arcRadius;
-        float yOffset = Mathf.Cos(angleRad) * arcRadius + arcRadius;  // Offset so arc top is above center
+        float yOffset = Mathf.Cos(angleRad) * arcRadius;  // Centered at gaze height
         
         // Apply arc position
         Vector3 metronomePos = centerPos + (right * xOffset);
