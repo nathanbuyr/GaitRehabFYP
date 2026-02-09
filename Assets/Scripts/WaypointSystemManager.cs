@@ -25,6 +25,10 @@ public class WaypointSystemManager : MonoBehaviour
     public float metronomeBPM = 40f;    // Beats per minute (slower default - adjust to your preference)
     public Color metronomeColor = Color.yellow;
     public float metronomeHeightOffset = -0.3f; // Lower than gaze (meters)
+    public bool showMetronomeArc = true;
+    public Color metronomeArcColor = new Color(1f, 1f, 0f, 0.5f);
+    public float metronomeArcWidth = 0.01f;
+    public int metronomeArcSegments = 24;
     
     private Transform playerCamera;
     private int waypointsCollected = 0;
@@ -36,6 +40,8 @@ public class WaypointSystemManager : MonoBehaviour
     private GameObject metronomeObject;
     private Renderer metronomeRenderer;
     private float metronomeBeatTime;
+    private GameObject metronomeArcObject;
+    private LineRenderer metronomeArcLine;
     
     void Start()
     {
@@ -271,6 +277,11 @@ public class WaypointSystemManager : MonoBehaviour
             metronomeRenderer.material.color = metronomeColor;
             metronomeRenderer.material.EnableKeyword("_EMISSION");
         }
+
+        if (showMetronomeArc)
+        {
+            SetupMetronomeArc();
+        }
         
         metronomeBeatTime = 60f / metronomeBPM;
         Debug.Log("Visual metronome enabled at " + metronomeBPM + " BPM");
@@ -301,6 +312,11 @@ public class WaypointSystemManager : MonoBehaviour
         Vector3 right = playerCamera.right;
         right.y = 0;
         right.Normalize();
+
+        if (showMetronomeArc && metronomeArcLine != null)
+        {
+            UpdateMetronomeArc(centerPos, right, arcRadius);
+        }
         
         // Calculate position on arc (x = sin, y = +cos centered at gaze height)
         float xOffset = Mathf.Sin(angleRad) * arcRadius;
@@ -316,6 +332,46 @@ public class WaypointSystemManager : MonoBehaviour
             // Brighten at the extremes of the swing
             float intensity = Mathf.Abs(angle) > 35f ? 3f : 1.5f;
             metronomeRenderer.material.SetColor("_EmissionColor", metronomeColor * intensity);
+        }
+    }
+
+    void SetupMetronomeArc()
+    {
+        metronomeArcObject = new GameObject("MetronomeArc");
+        metronomeArcLine = metronomeArcObject.AddComponent<LineRenderer>();
+        metronomeArcLine.useWorldSpace = true;
+        metronomeArcLine.positionCount = metronomeArcSegments + 1;
+        metronomeArcLine.startWidth = metronomeArcWidth;
+        metronomeArcLine.endWidth = metronomeArcWidth;
+        Shader arcShader = Shader.Find("Sprites/Default");
+        if (arcShader == null)
+        {
+            arcShader = Shader.Find("Unlit/Color");
+        }
+        if (arcShader != null)
+        {
+            metronomeArcLine.material = new Material(arcShader);
+            metronomeArcLine.material.color = metronomeArcColor;
+        }
+        metronomeArcLine.startColor = metronomeArcColor;
+        metronomeArcLine.endColor = metronomeArcColor;
+    }
+
+    void UpdateMetronomeArc(Vector3 centerPos, Vector3 right, float arcRadius)
+    {
+        float startAngle = -45f;
+        float endAngle = 45f;
+        float step = (endAngle - startAngle) / metronomeArcSegments;
+
+        for (int i = 0; i <= metronomeArcSegments; i++)
+        {
+            float angle = startAngle + step * i;
+            float angleRad = angle * Mathf.Deg2Rad;
+            float xOffset = Mathf.Sin(angleRad) * arcRadius;
+            float yOffset = Mathf.Cos(angleRad) * arcRadius;
+            Vector3 pos = centerPos + (right * xOffset);
+            pos.y = centerPos.y + yOffset;
+            metronomeArcLine.SetPosition(i, pos);
         }
     }
     
